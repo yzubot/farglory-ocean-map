@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0e7490">
+<title>遠雄海洋公園親子地圖</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{--bg:#f6f4ef;--fg:#1f2a24;--muted:#5d6b62;--card:#fff;--line:#d9d4c8;--accent:#c2410c;--me:#2563eb;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--chip:#eef2ee}
+@media (prefers-color-scheme:dark){:root{--bg:#141815;--fg:#e8ece6;--muted:#9fb0a4;--card:#1d231f;--line:#334036;--accent:#fb923c;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171;--chip:#26302a;color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 "Noto Sans TC",system-ui,-apple-system,"PingFang TC",sans-serif;display:flex;flex-direction:column}
+#mapwrap{position:relative;flex:0 0 52vh;min-height:280px}
+#mapReal,#mapOrig{position:absolute;inset:0}
+#mapOrig{display:none;background:#e8efe6}
+#panel{flex:1 1 auto;overflow:auto;padding:10px 14px calc(18px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line)}
+@media (min-width:900px){body{flex-direction:row}#mapwrap{flex:1 1 auto;height:100%}#panel{flex:0 0 440px;height:100%;border-top:0;border-left:1px solid var(--line)}}
+h1{font-size:18px;margin:0 0 2px;text-wrap:balance}
+h2{font-size:16px;margin:16px 0 6px}
+h3{font-size:14px;margin:12px 0 4px}
+.sub{color:var(--muted);font-size:13px;margin:0 0 8px}
+.bar{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+button,.btn{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:999px;padding:6px 11px;cursor:pointer;text-decoration:none;display:inline-block}
+button.on{background:var(--me);border-color:var(--me);color:#fff}
+#gps{font-size:13px;color:var(--muted);margin:4px 0 8px}
+.tabs{display:flex;gap:0;margin:8px 0 6px;border:1px solid var(--line);border-radius:12px;overflow:hidden;position:sticky;top:-10px;z-index:5;background:var(--bg)}
+.tabs button{flex:1;border:0;border-radius:0;padding:9px 4px;background:var(--card)}
+.tabs button.on{background:var(--me);color:#fff}
+.tab{display:none}.tab.on{display:block}
+#q{width:100%;font:inherit;font-size:16px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--fg)}
+#q:focus{outline:2px solid var(--me);outline-offset:1px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.chips button{font-size:13px;padding:4px 10px;background:var(--chip)}
+ul.list{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:6px}
+ul.list li{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 11px;cursor:pointer}
+ul.list li .top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+ul.list li .nm{font-weight:700}
+ul.list li .ds{color:var(--muted);font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums}
+ul.list li .nt{font-size:13px;color:var(--muted);margin-top:2px}
+.none{color:var(--muted);font-size:13px;cursor:default}
+.tag{display:inline-block;font-size:12px;border-radius:6px;padding:0 6px;margin-right:4px;border:1px solid currentColor;font-weight:600;white-space:nowrap}
+.t-ok{color:var(--ok)}.t-no{color:var(--bad)}.t-mid{color:var(--warn)}.t-gray{color:var(--muted)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0}
+.row label{font-size:14px}
+input[type=number],input[type=date]{font:inherit;font-size:16px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg);width:auto}
+input[type=number]{width:80px}
+input[type=range]{vertical-align:middle;width:90px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:8px 0;font-size:14px}
+.card p{margin:4px 0}
+.card ul{margin:4px 0;padding-left:20px}
+.big{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{border-bottom:1px solid var(--line);padding:5px 4px;text-align:left;vertical-align:top}
+td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.note{font-size:12px;color:var(--muted);margin-top:10px}
+.warn{color:var(--accent)}
+a{color:var(--me)}
+ol.plan{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+ol.plan li{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 11px;display:grid;grid-template-columns:50px 1fr;gap:2px 8px;cursor:pointer}
+ol.plan .t{font-weight:700;font-variant-numeric:tabular-nums}
+ol.plan .d,ol.plan .w{grid-column:2;font-size:13px}ol.plan .d{color:var(--muted)}ol.plan .w{color:var(--accent)}
+.pin{width:24px;height:24px;border-radius:50%;color:#fff;font:700 12px/22px system-ui;text-align:center;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.45)}
+.far .fac{display:none}
+.fac{font-size:17px;line-height:22px;text-align:center;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff}
+.hit{width:32px;height:32px;border-radius:50%;background:#2563eb;color:#fff;font:700 16px/26px system-ui;text-align:center;border:3px solid #fff;box-shadow:0 0 0 3px #2563eb,0 2px 6px rgba(0,0,0,.4)}
+.tip{position:fixed;z-index:99999;max-width:280px;background:#111;color:#fff;font-size:13px;line-height:1.45;padding:7px 10px;border-radius:8px;pointer-events:none;display:none;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+.maptools{position:absolute;right:8px;bottom:22px;z-index:800;display:flex;flex-direction:column;gap:6px}
+.maptools button{box-shadow:0 1px 5px rgba(0,0,0,.3);padding:7px 10px}
+.leaflet-popup-content{font-size:14px;line-height:1.5;margin:10px 12px}
+.leaflet-popup-content b{font-size:15px}
+.now{outline:2px solid var(--me)}
+.past{opacity:.5}
+.off{text-decoration:line-through;opacity:.6}
+.zone{display:inline-block;font-size:11px;border-radius:5px;padding:0 5px;color:#fff;margin-right:4px;vertical-align:1px}
+</style>
+</head>
+<body>
+<div id="mapwrap">
+  <div id="mapReal"></div>
+  <div id="mapOrig"></div>
+  <div class="maptools">
+    <button id="btnMode" data-tip="切換地圖：「真實地圖」是街道／衛星圖上疊官網導覽圖（已對位，推估）；「官網原圖」是不變形的官網導覽圖，藍點位置用對位公式換算（推估）。">🗺️ 官網原圖</button>
+    <button id="btnMe" data-tip="把地圖移到你目前的位置（要先開啟定位）。">◎ 我在哪</button>
+  </div>
+</div>
+<div id="panel">
+  <h1 data-tip="花蓮縣壽豐鄉鹽寮村福德 189 號。這頁是非官方整理，資料以遠雄海洋公園官網與現場公告為準。">遠雄海洋公園 親子地圖</h1>
+  <p class="sub" data-tip="官網導覽圖是手繪示意圖，不按比例（真實園區：東邊海岸低、西邊水晶城堡高，導覽圖把東畫在下方）。對位用 16 個 OpenStreetMap 地標估算，留一驗證誤差中位數約 14 公尺、最大約 50 公尺。">官網導覽圖疊在真實座標上（推估，誤差約 10–50 公尺）。步行時間用推嬰兒車速度估算（每分鐘約 45 公尺，山坡路線比直線多 50%，上坡再加時間）。點任何文字或標示都有說明。</p>
+  <div class="bar">
+    <button id="btnGps" data-tip="開啟手機定位，地圖上會出現藍點，每個地點會顯示從你這裡走過去要多久。要用 https 網址，並允許瀏覽器使用位置。">📍 開啟我的定位</button>
+    <button id="btnFollow" data-tip="開啟後地圖會跟著你的藍點移動。">跟著我移動</button>
+    <button id="btnFac" class="on" data-tip="真實地圖上顯示或隱藏洗手間、育嬰室、餐廳、商店、服務台等小圖示（放大到一定程度才會出現）。">🚻 設施圖示</button>
+    <button id="btnSat" data-tip="真實地圖底圖切換：街道圖（OpenStreetMap）或衛星照片（Esri）。">🛰️ 衛星</button>
+    <button id="btnOv" class="on" data-tip="真實地圖上要不要疊官網導覽圖。關掉可以看清楚底下的衛星圖／街道。">🖼 導覽圖</button>
+    <label data-tip="官網導覽圖的透明度，往左越透明。"><input id="op" type="range" min="20" max="100" value="80" aria-label="導覽圖透明度"></label>
+  </div>
+  <p id="gps" data-tip="定位狀態。手機 GPS 在園區內誤差大約 5–20 公尺，加上導覽圖對位本身是推估。">還沒開啟定位。按「開啟我的定位」，手機會問要不要允許，選允許。</p>
+
+  <div class="tabs" role="tablist">
+    <button data-t="fac" class="on" data-tip="搜尋設施、依身高年紀篩選小小孩可以玩的遊樂設施。">設施</button>
+    <button data-t="today" data-tip="選日期看營業時間、表演時刻（週三有休演）、保養停開的設施、飯店接駁車。">今天</button>
+    <button data-t="info" data-tip="票價、幾歲免費、付款方式、優惠、推車置物櫃、雨天備案、飯店資訊、注意事項。">資訊</button>
+    <button data-t="plan" data-tip="帶 2 歲小孩的建議玩法（先搭纜車上山再往下走），點每一站地圖會移過去。">行程</button>
+  </div>
+
+  <!-- 設施 -->
+  <section class="tab on" id="t-fac">
+    <label for="q" class="sub" style="display:block;margin:4px 0" data-tip="可以打設施名稱或常用說法，例如：旋轉木馬、球池、廁所、尿布、推車、纜車、海豚、美人魚、吃飯。有開定位就由近到遠排。">搜尋設施、表演、餐廳、洗手間</label>
+    <input id="q" type="search" placeholder="例如：旋轉木馬、球池、廁所、育嬰室、纜車" autocomplete="off" enterkeyhint="search" data-tip="輸入關鍵字，結果會出現在下面；點結果地圖會移過去並標星號。">
+    <div class="chips" id="quick"></div>
+    <ul class="list" id="res"></ul>
+    <h2 data-tip="依官網「遊樂設施搭乘限制」頁判斷（2026-11-24 查）。身高以現場工作人員丈量為準。">小小孩可以玩什麼？</h2>
+    <div class="row">
+      <label for="kh" data-tip="輸入孩子現在的身高（公分）。85 公分以上可以坐海國王號、旋轉木馬、碰碰船、摩天輪（要大人陪）；90 公分才能坐小藍鯨歷險記、乘風破浪。">孩子身高</label>
+      <input id="kh" type="number" min="60" max="160" step="1" value="89" inputmode="numeric" data-tip="公分。預設 89 公分（約 2 歲 3 個月）。改了會立即重新篩選。"> <span data-tip="公分">公分</span>
+      <label for="ka" data-tip="孩子年紀（歲）。大章魚沙灘、鯨魚的夢想家適合 1–6 歲；鯨魚大冒險適合 6–12 歲。">年紀</label>
+      <input id="ka" type="number" min="0" max="15" step="1" value="2" inputmode="numeric" data-tip="歲。">
+    </div>
+    <div class="chips">
+      <button id="fOk" class="on" data-tip="只列出這個身高／年紀可以玩、而且今天沒保養的設施（含展館、表演場）。">✅ 可以玩</button>
+      <button id="fAll" data-tip="列出全部遊樂設施與展館，標示能不能玩。">全部設施</button>
+      <button id="fRain" data-tip="只看室內、不怕下雨的設施與餐廳。">☔ 室內</button>
+    </div>
+    <ul class="list" id="rides"></ul>
+    <p class="note" data-tip="官網：身高以現場工作人員丈量為主，遠雄海洋公園保有解釋及調整之權利。">身高規定來源：遠雄海洋公園官網「遊樂設施搭乘限制」（2026-11-24 查）。「要大人陪」＝未滿 130 公分要大人一起坐。實際以現場量身高為準。</p>
+  </section>
+
+  <!-- 今天 -->
+  <section class="tab" id="t-today">
+    <div class="row"><label for="day" data-tip="選要去的日期。表演時刻表適用 2026/10/26–12/24；保養日期取自官網「保養停演公告」。">日期</label><input type="date" id="day" min="2026-11-01" max="2027-03-31" data-tip="點一下選日期。"></div>
+    <div id="todayBox"></div>
+    <p class="note">營業時間、節目時刻表、保養停演公告：遠雄海洋公園官網（2026-11-24 查）。如遇天候或設施狀況會臨時調整，以現場公告為準。</p>
+  </section>
+
+  <!-- 資訊 -->
+  <section class="tab" id="t-info"></section>
+
+  <!-- 行程 -->
+  <section class="tab" id="t-plan">
+    <p class="sub" data-tip="園區在山坡上：入口（2區探險島、1區海洋村）在最低處，8區水晶城堡在山頂。推嬰兒車上坡很累，建議先搭晴空纜車上山，再一路往下逛。">2 歲（約 89 公分）平日建議玩法：先看入口附近的水族館，搭晴空纜車上山到水晶城堡，一路往下玩 7→6→4→3 區，中午看海豚，下午回 2 區看海獅。</p>
+    <ol class="plan" id="plan"></ol>
+  </section>
+</div>
+<div class="tip" id="tip"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
